@@ -39,9 +39,15 @@ export class ProductsService {
       const {limit = 10, offset = 0} = paginationDto;
       const products = await this.productRepository.find({
         take: limit, 
-        skip: offset
+        skip: offset,
+        relations: {
+          images: true
+        }
       });
-      return products;
+      return products.map( product => ({
+        ...product,
+        images: product.images.map(img => img.url)
+      }));
     } catch (error) {
       this.handleDBExceptions(error);
     }
@@ -54,11 +60,13 @@ export class ProductsService {
       if(isUUID(term)){
         product = await this.productRepository.findOneBy({id:term});
       }else{
-        const queryBuilder = this.productRepository.createQueryBuilder();
+        const queryBuilder = this.productRepository.createQueryBuilder('prod');
         product = await queryBuilder.where('title ILIKE :title or slug =:slug',{
           title: term,
           slug: term
-        }).getOne();
+        })
+        .leftJoinAndSelect('prod.images','prodImages')
+        .getOne();
       }
       // const product = await this.productRepository.findOneBy({id});
       if( !product )
