@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, InternalServerErrorException, Logger, 
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, QueryBuilder, Repository } from 'typeorm';
 import {validate as isUUID} from 'uuid';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { ProductImage, Product } from './entities';
@@ -18,6 +18,8 @@ export class ProductsService {
 
     @InjectRepository(ProductImage)
     private readonly productImageRepository: Repository<ProductImage>,
+
+    private readonly dataSource: DataSource, 
   ){}
 
   async create(createProductDto: CreateProductDto) {
@@ -54,8 +56,6 @@ export class ProductsService {
   }
 
   async findOne(term: string) {
-    try {
-
       let product : Product;
       if(isUUID(term)){
         product = await this.productRepository.findOneBy({id:term});
@@ -72,32 +72,48 @@ export class ProductsService {
       if( !product )
         throw new NotFoundException(`product with ${term} not found`)
       return product;
-    } catch (error) {
-      this.handleDBExceptions(error);
-    }
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
+    const {images, ...toUpdate} = updateProductDto;
+    const product = await this.productRepository.preload({ id, ...toUpdate })
+    if(!product) throw new NotFoundException();
+    // Query Runner
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
     try {
-      const product = await this.productRepository.preload({
-        id,
-        ...updateProductDto,
-        images: []
-      })
-      if(!product) throw new NotFoundException();
-      return this.productRepository.save(product);
+      if(images){
+        await queryRunner.manager.delete(ProductImage,{product : { id }})
+      }
+      product.images = images.map(image => (
+        this.productImageRepository.create({ url : image })
+      ))
+      await queryRunner.manager.save(product);
+      await queryRunner.commitTransaction();
+      await queryRunner.manager.release();
+      return this.findOne(id);
     } catch (error) {
+      //todo:rollback
+      await queryRunner.rollbackTransaction();
+      await queryRunner.release();
       this.handleDBExceptions(error);
     }
   }
 
   async remove(id: string) {
-    try {
       const product = await this.findOne(id);
       await this.productRepository.remove(product);
       return product;
+  }
+
+  async deleteAll(){
+    const query = this.productRepository.createQueryBuilder('product');
+
+    try {
+      return await query.delete().where({}).execute();
     } catch (error) {
-      this.handleDBExceptions(error);
+      this.handleDBExceptions(error)
     }
   }
 
