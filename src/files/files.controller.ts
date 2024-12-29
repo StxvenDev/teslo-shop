@@ -3,7 +3,7 @@ import { FilesService } from './files.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { fileFilter } from './helpers/fileFilter.helper';
 import { diskStorage } from 'multer';
-import { fileNamer } from './helpers/fileNamer.helper copy';
+import { fileNamer } from './helpers/fileNamer.helper';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 
