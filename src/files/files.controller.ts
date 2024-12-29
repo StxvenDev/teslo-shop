@@ -20,7 +20,7 @@ export class FilesController {
     @Res() res: Response,
     @Param('imageName') imageName : string
   ){
-    const path = this.filesService.getStaticProducrImage(imageName);
+    const path = this.filesService.getStaticProductImage(imageName);
     res.sendFile( path );
   }
 
