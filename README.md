@@ -8,3 +8,5 @@
 2. Clonar el archivo  ```.env.template``` a ```.env``` y configurar las variables.
 3. Levantar la base de datos  ```docker-compose up -d```
 4. Ejecutar en modo de desarrollo   ```yarn start:dev```
+5. Ejecutar Seed
+```localhost:3000/api/seed```
