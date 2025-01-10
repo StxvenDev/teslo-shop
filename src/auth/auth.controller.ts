@@ -8,22 +8,29 @@ import { Auth, GetUser, RawHeaders } from './decorators';
 import { UserRoleGuard } from './guards/user-role/user-role.guard';
 import { RoleProtected } from './decorators/role-protected.decorator';
 import { ValidRoles } from './interfaces';
+import { ApiResponse } from '@nestjs/swagger';
 
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @ApiResponse({ status: 201, description: 'User created', type: User})
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @Post('register')
   createUser(@Body() createUserDto: CreateUserDto) {
     return this.authService.create( createUserDto );
   }
 
+  @ApiResponse({ status: 200, description: 'User logged', type: User})
+  @ApiResponse({ status: 400, description: 'Bad request' })
   @Post('login')
   loginUser(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login( loginUserDto );
   }
 
+  @ApiResponse({ status: 200, description: 'User created', type: User})
   @Get('check-auth-status')
   @Auth()
   checkAuthStatus(
